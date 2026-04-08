@@ -1,6 +1,9 @@
 #include "wifi_manager.h"
 #include <Arduino.h>
 
+// const char *ssid = "SauAn (TRET)";
+// const char *password = "Sauan1944@";
+
 const char *ssid = "MrKen";
 const char *password = "Ken260814@";
 

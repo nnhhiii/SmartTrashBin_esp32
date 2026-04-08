@@ -4,6 +4,7 @@
 #include <Stepper.h>
 #include <ESP32Servo.h>
 // #include "tft_screen.h"
+#include <Preferences.h>
 
 #define IN1 14
 #define IN2 27
@@ -23,6 +24,7 @@
 #define ECHO_RECYCLABLE 5
 
 Servo lidServo1, lidServo2;
+Preferences prefs;
 
 const int stepsPerRevolution = 2048;
 int currentPosition = 0;
@@ -31,6 +33,13 @@ Stepper stepper(stepsPerRevolution, IN1, IN3, IN2, IN4);
 
 void setupBinController()
 {
+    prefs.begin("bin", false); // namespace "bin"
+
+    currentPosition = prefs.getInt("pos", 0);
+
+    Serial.print("Loaded position: ");
+    Serial.println(currentPosition);
+
     stepper.setSpeed(10);
 
     lidServo1.attach(SERVO1_PIN);
@@ -72,6 +81,12 @@ void rotateBinBottom(String type)
         level = getLevelPercent(TRIG_RECYCLABLE, ECHO_RECYCLABLE);
     }
 
+    if (level < 0)
+    {
+        Serial.println("Sensor error!");
+        return;
+    }
+
     // Nếu thùng đầy
     if (level > 80)
     {
@@ -87,6 +102,12 @@ void rotateBinBottom(String type)
     stepper.step(stepsToMove);
 
     currentPosition = targetPosition;
+
+    // lưu vào flash (NVS)
+    prefs.putInt("pos", currentPosition);
+
+    Serial.print("Saved position: ");
+    Serial.println(currentPosition);
 
     delay(1000);
 

@@ -25,7 +25,7 @@ int getLevelPercent(int trigPin, int echoPin)
     if (distance == 0)
         return -1; // sensor error
 
-    int percent = map(distance, 40, 5, 0, 100);
+    int percent = map(distance, 20, 5, 0, 100);
 
     percent = constrain(percent, 0, 100);
 

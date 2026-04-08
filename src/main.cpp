@@ -17,7 +17,7 @@ enum SystemState
 
 SystemState currentState = READY;
 unsigned long lastActivityTime = 0;
-const unsigned long SLEEP_TIMEOUT = 5000;
+const unsigned long SLEEP_TIMEOUT = 30000;
 
 void setup()
 {
