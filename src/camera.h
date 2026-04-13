@@ -4,6 +4,11 @@
 #include <Arduino.h>
 
 String captureImage();
-String getWasteType(String json);
+typedef struct
+{
+    String type;
+    float confidence;
+} WasteInfo;
+WasteInfo getWasteInfo(String json);
 
 #endif

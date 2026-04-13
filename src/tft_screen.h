@@ -3,6 +3,6 @@
 #include <TFT_eSPI.h>
 
 void setupTFTScreen();
-void displayData(String type, int organic, int inorganic, int recyclable);
+void displayData(String type, float confidence, int organic, int inorganic, int recyclable);
 
 #endif

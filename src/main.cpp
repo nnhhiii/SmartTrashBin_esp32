@@ -3,7 +3,7 @@
 #include "wifi_manager.h"
 #include "camera.h"
 #include "firebase.h"
-// #include "tft_screen.h"
+#include "tft_screen.h"
 
 #define IR_PIN 34
 
@@ -26,7 +26,7 @@ void setup()
 
   setupBinController();
   connectWifi();
-  // setupTFTScreen();
+  setupTFTScreen();
   lastActivityTime = millis();
 }
 
@@ -64,11 +64,11 @@ void loop()
     Serial.println("Processing...");
 
     String result = captureImage();
-    String type = getWasteType(result);
+    WasteInfo wasteInfo = getWasteInfo(result);
 
-    sendWasteLog(type, 0.93);
+    sendWasteLog(wasteInfo.type, wasteInfo.confidence);
 
-    rotateBinBottom(type);
+    rotateBinBottom(wasteInfo.type, wasteInfo.confidence);
 
     lastActivityTime = millis();
     currentState = READY;

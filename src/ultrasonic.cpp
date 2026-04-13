@@ -31,3 +31,28 @@ int getLevelPercent(int trigPin, int echoPin)
 
     return percent;
 }
+
+// đọc sensor ổn định (lọc trung bình)
+int readLevelStable(int trig, int echo)
+{
+    int sum = 0;
+    int validCount = 0;
+
+    for (int i = 0; i < 5; i++)
+    {
+        int val = getLevelPercent(trig, echo);
+
+        if (val >= 0 && val <= 100)
+        {
+            sum += val;
+            validCount++;
+        }
+
+        delay(50);
+    }
+
+    if (validCount == 0)
+        return -1;
+
+    return sum / validCount;
+}

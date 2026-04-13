@@ -3,7 +3,7 @@
 #include "firebase.h"
 #include <Stepper.h>
 #include <ESP32Servo.h>
-// #include "tft_screen.h"
+#include "tft_screen.h"
 #include <Preferences.h>
 
 #define IN1 14
@@ -23,6 +23,7 @@
 #define TRIG_RECYCLABLE 19
 #define ECHO_RECYCLABLE 5
 
+// ================= GLOBAL =================
 Servo lidServo1, lidServo2;
 Preferences prefs;
 
@@ -31,11 +32,17 @@ int currentPosition = 0;
 
 Stepper stepper(stepsPerRevolution, IN1, IN3, IN2, IN4);
 
+// ================= SETUP =================
+
 void setupBinController()
 {
-    prefs.begin("bin", false); // namespace "bin"
+    prefs.begin("bin", false);
 
     currentPosition = prefs.getInt("pos", 0);
+
+    // chống dữ liệu rác
+    if (currentPosition < 0 || currentPosition > 2048)
+        currentPosition = 0;
 
     Serial.print("Loaded position: ");
     Serial.println(currentPosition);
@@ -58,9 +65,15 @@ void setupBinController()
     pinMode(ECHO_RECYCLABLE, INPUT);
 }
 
-void rotateBinBottom(String type)
+// ================= STEPPER =================
+
+void rotateBinBottom(String type, float confidence)
 {
     Serial.println("Rotate to: " + type);
+
+    int organic = readLevelStable(TRIG_ORGANIC, ECHO_ORGANIC);
+    int inorganic = readLevelStable(TRIG_INORGANIC, ECHO_INORGANIC);
+    int recyclable = readLevelStable(TRIG_RECYCLABLE, ECHO_RECYCLABLE);
 
     int targetPosition = 0;
     int level = 0;
@@ -68,33 +81,38 @@ void rotateBinBottom(String type)
     if (type == "organic")
     {
         targetPosition = 0;
-        level = getLevelPercent(TRIG_ORGANIC, ECHO_ORGANIC);
+        level = organic;
     }
     else if (type == "inorganic")
     {
         targetPosition = 682;
-        level = getLevelPercent(TRIG_INORGANIC, ECHO_INORGANIC);
+        level = inorganic;
     }
     else if (type == "recyclable")
     {
         targetPosition = 1365;
-        level = getLevelPercent(TRIG_RECYCLABLE, ECHO_RECYCLABLE);
+        level = recyclable;
     }
 
     if (level < 0)
     {
-        Serial.println("Sensor error!");
+        Serial.println("Sensor error - cannot rotate");
+
+        displayData("ERROR", 0.0, organic, inorganic, recyclable);
+        sendAlert(type, level);
+
         return;
     }
 
-    // Nếu thùng đầy
+    // nếu đầy
     if (level > 80)
     {
         Serial.println("Bin FULL - cannot open lid");
 
+        displayData("BIN FULL - cannot open lid", 0.0, organic, inorganic, recyclable);
         sendAlert(type, level);
 
-        return; // dừng lại
+        return;
     }
 
     int stepsToMove = targetPosition - currentPosition;
@@ -103,18 +121,20 @@ void rotateBinBottom(String type)
 
     currentPosition = targetPosition;
 
-    // lưu vào flash (NVS)
+    // lưu vị trí
     prefs.putInt("pos", currentPosition);
 
     Serial.print("Saved position: ");
     Serial.println(currentPosition);
 
-    delay(1000);
+    delay(500);
 
-    openLid();
+    openLid(type, confidence, organic, inorganic, recyclable);
 }
 
-void openLid()
+// ================= SERVO =================
+
+void openLid(String type, float confidence, int organic, int inorganic, int recyclable)
 {
     Serial.println("Open lid");
 
@@ -128,24 +148,21 @@ void openLid()
 
     Serial.println("Close lid");
 
-    checkBins();
+    checkBin(type, confidence, organic, inorganic, recyclable);
 }
 
-void checkBins()
-{
-    int organic = getLevelPercent(TRIG_ORGANIC, ECHO_ORGANIC);
-    int inorganic = getLevelPercent(TRIG_INORGANIC, ECHO_INORGANIC);
-    int recyclable = getLevelPercent(TRIG_RECYCLABLE, ECHO_RECYCLABLE);
+// ================= UPDATE =================
 
+void checkBin(String type, float confidence, int organic, int inorganic, int recyclable)
+{
     Serial.println("===== BIN LEVEL =====");
     Serial.printf("Organic: %d%%\n", organic);
     Serial.printf("Inorganic: %d%%\n", inorganic);
     Serial.printf("Recyclable: %d%%\n", recyclable);
     Serial.println("=====================");
 
-    delay(500);
+    displayData(type, confidence, organic, inorganic, recyclable);
 
-    // displayData("Updated", organic, inorganic, recyclable);
     updateBinLevel(organic, inorganic, recyclable);
 
     if (organic > 80)
