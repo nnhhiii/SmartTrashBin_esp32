@@ -98,8 +98,9 @@ void rotateBinBottom(String type, float confidence)
     {
         Serial.println("Sensor error - cannot rotate");
 
-        displayData("ERROR", 0.0, organic, inorganic, recyclable);
+        displayData("SENSOR ERROR - cannot rotate", 0.0, organic, inorganic, recyclable);
         sendAlert(type, level);
+        delay(2000);
 
         return;
     }
@@ -111,6 +112,7 @@ void rotateBinBottom(String type, float confidence)
 
         displayData("BIN FULL - cannot open lid", 0.0, organic, inorganic, recyclable);
         sendAlert(type, level);
+        delay(2000);
 
         return;
     }
@@ -162,8 +164,8 @@ void checkBin(String type, float confidence, int organic, int inorganic, int rec
     Serial.println("=====================");
 
     displayData(type, confidence, organic, inorganic, recyclable);
-
     updateBinLevel(organic, inorganic, recyclable);
+    delay(3000);
 
     if (organic > 80)
         sendAlert("organic", organic);

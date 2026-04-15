@@ -2,7 +2,7 @@
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
 
-String esp32camIP = "http://192.168.1.111/capture";
+String esp32camIP = "http://192.168.1.118/capture";
 
 String captureImage()
 {

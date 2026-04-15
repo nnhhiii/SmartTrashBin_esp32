@@ -16,8 +16,11 @@ enum SystemState
 };
 
 SystemState currentState = READY;
+SystemState lastState = ERROR; // để chắc chắn vẽ lần đầu
+
 unsigned long lastActivityTime = 0;
-const unsigned long SLEEP_TIMEOUT = 30000;
+const unsigned long SLEEP_TIMEOUT = 10000;
+String errorMsg = "";
 
 void setup()
 {
@@ -41,11 +44,38 @@ void enterDeepSleep()
 
   delay(100);
 
+  WiFi.disconnect(true);
+  WiFi.mode(WIFI_OFF);
+
   esp_deep_sleep_start();
 }
 
 void loop()
 {
+  if (currentState != lastState)
+  {
+    switch (currentState)
+    {
+    case READY:
+      showReadyScreen();
+      break;
+
+    case PROCESSING:
+      showProcessingScreen();
+      break;
+
+    case SLEEP:
+      showSleepScreen();
+      break;
+
+    case ERROR:
+      showErrorScreen(errorMsg);
+      break;
+    }
+
+    lastState = currentState;
+  }
+
   switch (currentState)
   {
   case READY:
@@ -62,12 +92,26 @@ void loop()
   case PROCESSING:
   {
     Serial.println("Processing...");
-
     String result = captureImage();
+
+    if (result == "ERROR")
+    {
+      currentState = ERROR;
+      errorMsg = "Camera fail";
+      break;
+    }
+
     WasteInfo wasteInfo = getWasteInfo(result);
 
-    sendWasteLog(wasteInfo.type, wasteInfo.confidence);
+    if (wasteInfo.type == "unknown" || wasteInfo.confidence < 0.3)
+    {
+      currentState = ERROR;
+      errorMsg = "AI failed";
+      break;
+    }
 
+    sendWasteLog(wasteInfo.type, wasteInfo.confidence);
+    displayData(wasteInfo.type, wasteInfo.confidence, -1, -1, -1);
     rotateBinBottom(wasteInfo.type, wasteInfo.confidence);
 
     lastActivityTime = millis();
@@ -78,6 +122,8 @@ void loop()
   case SLEEP:
   {
     Serial.println("Go to sleep...");
+    delay(500);
+
     setupWakeup();
     delay(100);
     enterDeepSleep();
@@ -85,8 +131,11 @@ void loop()
   }
 
   case ERROR:
-    delay(2000);
+  {
+    Serial.println("ERROR");
+    delay(3000);
     currentState = READY;
     break;
+  }
   }
 }
